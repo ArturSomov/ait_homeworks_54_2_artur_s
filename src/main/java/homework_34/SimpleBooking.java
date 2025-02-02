@@ -6,12 +6,20 @@ class NoGuestException extends Exception {
     }
 }
 
+class RoomUnavailableException extends Exception {
+    public RoomUnavailableException(String message) {
+        super(message);
+    }
+}
+
 public class SimpleBooking {
 
     private static final int[] rooms = {100, 101, 102, 200, 201};
     private static final String[] guests = new String[5];
+    private static final boolean[] roomStatus = new boolean[5];
 
-    public void bookRoom (int roomNumber, String guestName) {
+
+    public void bookRoom(int roomNumber, String guestName) throws RoomUnavailableException {
 
         if (roomNumber <= 0) {
             throw new IllegalArgumentException("Incorrect room number: " + roomNumber);
@@ -19,7 +27,33 @@ public class SimpleBooking {
         if (guestName == null || guestName.trim().isEmpty()) {
             throw new IllegalArgumentException("Incorrect guest name");
         }
-        System.out.println("Room " + roomNumber + " is successfully booked for " + guestName);
+        for (int i = 0; i < rooms.length; i++) {
+            if (rooms[i] == roomNumber) {
+                if (roomStatus[i]) {
+                    throw new RoomUnavailableException("Room " + roomNumber + " is already booked");
+                }
+                roomStatus[i] = true;
+                guests[i] = guestName;
+                System.out.println("Room " + roomNumber + " is successfully booked for " + guestName);
+                return;
+            }
+        }
+        throw new IllegalArgumentException("Room with number " + roomNumber + " is not exist");
+    }
+
+    public void cancelReservation(int roomNumber) throws RoomUnavailableException {
+        for (int i = 0; i < rooms.length; i++) {
+            if (rooms[i] == roomNumber) {
+                if (!roomStatus[i]) {
+                    throw new RoomUnavailableException("You cannot cancel a non-existent reservation for a room " + roomNumber);
+                }
+                roomStatus[i] = false;
+                guests[i] = null;
+                System.out.println("Booking for room " + roomNumber + " is cancelled");
+                return;
+            }
+        }
+        throw new IllegalArgumentException("Room with number " + roomNumber + " is not existed");
     }
 
     public void addGuest(int roomIndex, String guestName) {
@@ -47,30 +81,24 @@ public class SimpleBooking {
     public static void main(String[] args) {
         SimpleBooking booking = new SimpleBooking();
 
-        int [] testRooms = {101, -1, 202, 0};
-        String [] testGuests = {"Mr Freeman", "", null, "Ms Smith"};
+        try {
+            booking.bookRoom(101, "Ivan Ivanov");
+            booking.bookRoom(101, "Anna Hanna"); // Ошибка: комната уже занята
+        } catch (Exception e) {
+            System.out.println("Error by booking: " + e.getMessage());
+        }
 
-        for (int i = 0; i < testRooms.length; i++) {
-            try {
-                booking.bookRoom(testRooms[i], testGuests[i]);
-            } catch (IllegalArgumentException e) {
-                System.out.println("Incorrect booking information: " + e.getMessage());
-            }
+        try {
+            booking.cancelReservation(101);
+            booking.cancelReservation(101); // Ошибка: отмена несуществующего бронирования
+        } catch (Exception e) {
+            System.out.println("Error by cancelling booking: " + e.getMessage());
+        }
 
-            try {
-                booking.addGuest(1, "John Snow");
-                booking.addGuest(5, "Triss Merigold");
-            } catch (Exception e) {
-                System.out.println("Error by adding guest " + e.getMessage());
-            }
-
-            try {
-                System.out.println("Guest in room 102: " + booking.getGuest(1));
-                System.out.println("Guest in room 103: " + booking.getGuest(2));
-                System.out.println("Guest in room 201: " + booking.getGuest(3));
-            } catch (Exception e) {
-                System.out.println("Error by adding guest: " + e.getMessage());
-            }
+        try {
+            booking.cancelReservation(999); // Ошибка: комната не существует
+        } catch (Exception e) {
+            System.out.println("Error by cancelling booking: " + e.getMessage());
         }
     }
 }
